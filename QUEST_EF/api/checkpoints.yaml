@@ -1,0 +1,6 @@
+cardiac_cycle_prediction:
+  checkpoint_path: weights/cardiac_cycle_prediction.ckpt
+
+ef_prediction:
+  checkpoint_path: weights/ef_prediction.ckpt
+  accelerator: 'cpu'

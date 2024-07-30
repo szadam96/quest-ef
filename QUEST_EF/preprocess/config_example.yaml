@@ -1,0 +1,23 @@
+data_dir: 'path/to/preprocessed/data'
+image_size: 256
+
+view:
+  checkpoint_path: 'weights/view.ckpt'
+  prediction_threshold: 0.5556141668812448
+  out_dim: 3
+  batch_size: 100
+
+orientation:
+  checkpoint_path: 'weights/orientation.ckpt'
+  prediction_threshold: 0.99
+  out_dim: 2
+  batch_size: 100
+
+cardiac_cycle_prediction:
+  checkpoint_path: 'weights/orientation.ckpt'
+
+json_generation:
+  output: 'path/to/output/json'
+  frames_to_sample: 16
+  label: ['LVEF', 'RVEF']
+  name: 'all2'
