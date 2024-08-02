@@ -16,6 +16,69 @@ from matplotlib import pyplot as plt
 warnings.filterwarnings('ignore')
 pd.options.mode.chained_assignment = None
 
+def is_colored(pixel_array, bbox, photometric_interpretation):
+    if len(pixel_array.shape) == 3:
+        return False
+    # Converting color space (if necessary)
+    n_of_all_pixels = pixel_array.shape[1] * pixel_array.shape[2]
+    if photometric_interpretation != 'RGB':
+        pixel_array = convert_color_space(pixel_array, photometric_interpretation, 'RGB', per_frame=True)
+    elif np.sum(pixel_array[0, :, :, 1] == 128) > n_of_all_pixels * 0.80 or \
+            np.sum(pixel_array[0, :, :, 2] == 128) > n_of_all_pixels * 0.80:
+        pixel_array = convert_color_space(pixel_array, 'YBR_FULL_422', 'RGB', per_frame=True)
+
+    # Cropping frames
+    cropped_frames = np.zeros((pixel_array.shape[0], int(bbox['max_x'] - bbox['min_x']),
+                               int(bbox['max_y'] - bbox['min_y']), pixel_array.shape[3])).astype(np.int32)
+    for i, frame in enumerate(pixel_array):
+        cropped_frames[i, :, :, :] = frame[int(bbox['min_x']):int(bbox['max_x']),
+                                           int(bbox['min_y']):int(bbox['max_y']), :]
+
+    # Computing the extent of changes in pixel intensity values
+    changes = np.zeros((int(bbox['max_x'] - bbox['min_x']), int(bbox['max_y'] - bbox['min_y']), pixel_array.shape[3]))
+    binary_mask = np.zeros((int(bbox['max_x'] - bbox['min_x']), int(bbox['max_y'] - bbox['min_y']),
+                            pixel_array.shape[3]))
+    for i in range(len(cropped_frames) - 1):
+        diff = abs(cropped_frames[i].astype(np.int32) - cropped_frames[i + 1].astype(np.int32))
+        changes += diff
+
+    nonzero_values = np.nonzero(changes)
+    binary_mask[nonzero_values[0], nonzero_values[1]] += 1
+
+    # Removing static objects
+    for i, cropped_frame in enumerate(cropped_frames):
+        cropped_frames[i, :, :, :] = np.where(binary_mask, cropped_frame, 0)
+
+    # Extracting channels
+    r_cropped_frames = cropped_frames[:, :, :, 0]
+    g_cropped_frames = cropped_frames[:, :, :, 1]
+    b_cropped_frames = cropped_frames[:, :, :, 2]
+
+    # Setting thresholds
+    diff_threshold = 100
+    colored_pixels_threshold = 0.01
+
+    # Checking whether there is color data present in the frames
+    rg_diff = np.abs(r_cropped_frames - g_cropped_frames)
+    rg_diff[rg_diff < diff_threshold] = 0
+    rg_diff = np.sum(rg_diff, axis=0)
+    rb_diff = np.abs(r_cropped_frames - b_cropped_frames)
+    rb_diff[rb_diff < diff_threshold] = 0
+    rb_diff = np.sum(rb_diff, axis=0)
+    gb_diff = np.abs(g_cropped_frames - b_cropped_frames)
+    gb_diff[gb_diff < diff_threshold] = 0
+    gb_diff = np.sum(gb_diff, axis=0)
+
+    sum_diff = (rg_diff + rb_diff + gb_diff)
+    sum_diff[sum_diff > 0] = 255
+
+    n_of_colored_pixels = np.sum(sum_diff > 0)
+
+    if n_of_colored_pixels > round(n_of_all_pixels * colored_pixels_threshold):
+        return True
+    else:
+        return False
+
 def print_or_raise(msg, raise_error=False):
     if raise_error:
         raise ValueError(msg)
@@ -111,7 +174,7 @@ def create_mask(gray_frames, reference_pixel):
     return cropped_binary_mask, cropped_largest_contour_mask, cropped_hull_mask, bbox
 
 
-def save_frames(dicom_dataset, path_to_save, frame_limit=None, flip=False):
+def save_frames(dicom_dataset, path_to_save, frame_limit=None, flip=False, check_if_colored=True):
     # Extracting the pixel array from the DICOM dataset
     pixel_array = dicom_dataset.pixel_array
 
@@ -152,6 +215,8 @@ def save_frames(dicom_dataset, path_to_save, frame_limit=None, flip=False):
                 X1 = gray_frames.shape[2]
             gray_frames = gray_frames[:, Y0:Y1, X0:X1]
 
+            if len(pixel_array.shape) == 4:
+                    pixel_array = pixel_array[:, Y0:Y1, X0:X1, :]
             if hasattr(dicom_dataset.SequenceOfUltrasoundRegions[0], 'ReferencePixelX0'):
                 ReferencePixel = [dicom_dataset.SequenceOfUltrasoundRegions[0].ReferencePixelX0,
                                   dicom_dataset.SequenceOfUltrasoundRegions[0].ReferencePixelY0]
@@ -174,6 +239,16 @@ def save_frames(dicom_dataset, path_to_save, frame_limit=None, flip=False):
     os.makedirs(os.path.join(path_to_save, 'frames'), exist_ok=True)
     cv2.imwrite(os.path.join(path_to_save, 'mask.png'), cropped_hull_mask * 255)
 
+    # Checking whether there is color data present in the frames
+    colored = False
+    if hasattr(dicom_dataset, 'PhotometricInterpretation') and check_if_colored:
+        if hasattr(dicom_dataset, 'UltrasoundColorDataPresent'):
+            colored = int(dicom_dataset.UltrasoundColorDataPresent) == 1
+        if colored or not hasattr(dicom_dataset, 'UltrasoundColorDataPresent'):
+            colored = is_colored(pixel_array, bbox, dicom_dataset.PhotometricInterpretation)
+        if colored:
+            raise ValueError('The video contains colored frames!')
+    
     # Computing the extent of changes in pixel intensity values
     changes = np.zeros((first_n_gray_frames.shape[1], first_n_gray_frames.shape[2]))
     binary_mask = np.zeros((first_n_gray_frames.shape[1], first_n_gray_frames.shape[2]))
@@ -214,7 +289,7 @@ def preprocess_dicom(dicom_file_path: Path, output_path: Path, skip_saving: bool
     except Exception as e:
         print_or_raise(f'Error while processing {dicom_file_path}: {str(e)}', raise_error=raise_error)
         return {}
-    path_to_save = output_path / dicom_file_path.stem
+    path_to_save = output_path / f'{dicom_file_path.parent.stem}_{dicom_file_path.stem}'
 
     # Checking whether the DICOM file contains a 3D ultrasound video
     if is_3d_dicom(dicom_dataset):
@@ -311,7 +386,7 @@ def main():
         df = pd.DataFrame(dicom_files_list, columns=['dicom_path'])
     else:
         df = pd.read_csv(args.path_to_csv)
-        dicom_files_list = df.iloc[:, 0].to_list()
+        dicom_files_list = df['dicom_path'].to_list()
 
     output_folder = Path(args.output_folder)
     out_csv = Path(args.out_csv)
