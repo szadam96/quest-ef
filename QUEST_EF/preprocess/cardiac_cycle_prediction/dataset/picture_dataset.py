@@ -26,7 +26,7 @@ class AbstractEcho2dPictures(Dataset):
         self.dicom_id = os.path.basename(self.input_folder) #.split('_', 1)[1]
 
         orientation_lower = orientation.lower()
-        assert orientation_lower in ['mayo', 'stanford'], f'received unsupported orientation: {orientation}'
+        assert orientation_lower in ['mayo', 'stanford'], f'received unsupported orientation: {orientation_lower}'
         self.orientation = orientation_lower
 
         self.transform = transform

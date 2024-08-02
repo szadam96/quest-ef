@@ -141,7 +141,7 @@ class Echo2dVideosNetLM(EchoLightningModule):
         return output, dicom_ids, filenames
 
 def create_model_module(module_config):
-    module_class = get_class(module_config['name'], modules=['ROI_aware_masking.preprocess.cardiac_cycle_prediction.model.model'])
+    module_class = get_class(module_config['name'], modules=['QUEST_EF.preprocess.cardiac_cycle_prediction.model.model'])
     module_config.pop('name')
     
     model_config = module_config.pop('model')

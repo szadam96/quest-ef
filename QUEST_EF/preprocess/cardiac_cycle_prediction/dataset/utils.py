@@ -39,7 +39,7 @@ def create_data_module(config):
     datasets_config = config['datasets']
     datasets = create_datasets(datasets_config)
 
-    clazz = get_class(name, modules=['ROI_aware_masking.preprocess.cardiac_cycle_prediction.dataset.picture_module'])
+    clazz = get_class(name, modules=['QUEST_EF.preprocess.cardiac_cycle_prediction.dataset.picture_module'])
     data_module = clazz(
         datasets=datasets,
         batch_size=batch_size,
@@ -82,7 +82,7 @@ def create_regular_dataset(config, annotation_data=None, orientation_data=None, 
     name = config['name']
     preprocessor = None
     transform = create_transform(None)
-    clazz = get_class(name, modules=['ROI_aware_masking.preprocess.cardiac_cycle_prediction.dataset.picture_dataset'])
+    clazz = get_class(name, modules=['QUEST_EF.preprocess.cardiac_cycle_prediction.dataset.picture_dataset'])
     input_folder = os.path.join(input_dir, dicom_id)
 
     ds = clazz(
@@ -102,7 +102,7 @@ def create_echo_video_dataset(config, annotation_data, orientation_data, dicom_i
     pictures_ds = create_regular_dataset(pictures_ds_config, annotation_data, orientation_data, dicom_id, input_dir)
    
     # TODO: fix this (circular import workaround)
-    clazz = get_class('Echo2dVideo', modules=['ROI_aware_masking.preprocess.cardiac_cycle_prediction.dataset.picture_dataset'])
+    clazz = get_class('Echo2dVideo', modules=['QUEST_EF.preprocess.cardiac_cycle_prediction.dataset.picture_dataset'])
     ds = clazz(
         pictures_ds,
         frames_per_video=frames_per_video,

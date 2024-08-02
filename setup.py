@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='ROI_aware_masking',
+    name='QUEST_EF',
     version='1.0.0',
     packages=find_packages(),
     install_requires=[

@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
-from view_and_orientation.run_predictions import run_classifier
+from QUEST_EF.preprocess.view_and_orientation.run_predictions import run_classifier
 
-from view_and_orientation.utils.config import load_config
+from QUEST_EF.preprocess.view_and_orientation.utils.config import load_config
 
 
 def main():
@@ -13,7 +13,6 @@ def main():
 
     config = load_config(args.config)
     data_csv = args.data_csv
-
     run_classifier(config, data_csv, type_='view')
     run_classifier(config, data_csv, type_='orientation')
 

@@ -9,7 +9,7 @@ from QUEST_EF.preprocess.view_and_orientation.utils.callbacks import Orientation
 def run_classifier(config, data_csv, type_='view', devices='auto'):
     model = ModelV.load_from_checkpoint(config[type_]['checkpoint_path'], pytorch_module=ResNeXt50Module(config[type_]['out_dim']))
     transforms = get_transforms(config)
-    dataset = EchoImageDataset(config['data_dir'], transform=transforms, data_csv=data_csv)
+    dataset = EchoImageDataset(config['data_dir'], transform=transforms, data_csv=data_csv, include_binary_mask=True)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=config[type_]['batch_size'], shuffle=False, num_workers=4)
     model.eval()
     if type_ == 'view':
@@ -18,5 +18,5 @@ def run_classifier(config, data_csv, type_='view', devices='auto'):
         writer = OrientationPredictionWriter(data_csv, config[type_]['prediction_threshold'])
     else:
         raise ValueError('type_ must be view or orientation')
-    trainer = pl.Trainer(accelerator='cpu', devices=devices, callbacks=[writer])
+    trainer = pl.Trainer(accelerator='gpu', devices=1, callbacks=[writer])
     trainer.predict(model, dataloader)
