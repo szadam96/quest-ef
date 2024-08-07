@@ -22,11 +22,13 @@ class PredictionWriter(BasePredictionWriter):
 
         validation_df = pd.DataFrame({'patient_id': np.concatenate([x['patient_id'] for x in predictions]),
                                         'dicom_id': np.concatenate([x['dicom_id'] for x in predictions]),
+                                        'view_pred': np.concatenate([x['view_pred'] for x in predictions]),
+                                        'orientation_pred': np.concatenate([x['orientation_pred'] for x in predictions]),
                                         'lvef_true': [x for x in lvef_trues.numpy()],
                                         'lvef_pred': [x for x in lvef_preds.numpy()],
                                         'rvef_true': [x for x in rvef_trues.numpy()],
                                         'rvef_pred': [x for x in rvef_preds.numpy()]})
         
-        validation_df = validation_df.groupby(['patient_id', 'dicom_id']).mean().reset_index()
+        validation_df = validation_df.groupby(['patient_id', 'dicom_id', 'view_pred', 'orientation_pred']).mean().reset_index()
         
         validation_df.to_csv(self.output_dir / f'validation_predictions.csv', index=False)

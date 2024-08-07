@@ -106,6 +106,8 @@ class EchoModel(pl.LightningModule):
         lvef_true = batch['LVEF']
         patient_id = batch['patient_id']
         dicom_id = batch['dicom_id']
+        view_pred = batch['view_pred']
+        orientation_pred = batch['orientation_pred']
         if isinstance(self.model, CustomVideoMAEForRegression) or isinstance(self.model, BiventricularModel):
             pred = self.model(x, binary_mask_pos)
         else:
@@ -122,7 +124,15 @@ class EchoModel(pl.LightningModule):
             rvef_pred = rvef_pred.unsqueeze(0)
         if len(lvef_pred.size()) == 0:
             lvef_pred = lvef_pred.unsqueeze(0)
-        output = {'loss': loss, 'patient_id': patient_id, 'dicom_id': dicom_id, 'rvef_pred': rvef_pred, 'rvef_true': rvef_true, 'lvef_pred': lvef_pred, 'lvef_true': lvef_true}
+        output = {'loss': loss,
+                  'patient_id': patient_id,
+                  'dicom_id': dicom_id,
+                  'rvef_pred': rvef_pred,
+                  'rvef_true': rvef_true,
+                  'lvef_pred': lvef_pred,
+                  'lvef_true': lvef_true,
+                  'view_pred': view_pred,
+                  'orientation_pred': orientation_pred}
         return output
     
 

@@ -43,17 +43,15 @@ class OrientationPredictionWriter(BasePredictionWriter):
         self.df = pd.read_csv(self.output_csv)
         if 'dicom_id' not in self.df.columns:
             raise ValueError('output_csv must have a column named dicom_id')
-        if 'view' not in self.df.columns:
-            raise ValueError('output_csv must have a column named view. Try running the view classifier first.')
-
+        
     def write_on_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, predictions: Sequence[Any], batch_indices: Sequence[Any]):
         pred_probas, dicom_ids = zip(*predictions)
         pred_probas = np.concatenate(pred_probas)
         dicom_ids = np.concatenate(dicom_ids)
-        temp_df = pd.DataFrame(list(zip(dicom_ids, pred_probas[:, 0])), columns=['dicom_id', 'orientation_pred'])
+        temp_df = pd.DataFrame(list(zip(dicom_ids, pred_probas[:, 0])), columns=['dicom_id', 'orientation_pred_proba'])
         
         temp_df = temp_df.groupby('dicom_id').mean().reset_index()
-        temp_df['orientation'] = temp_df['orientation_pred'].apply(lambda x: 'mayo' if x > self.prediction_threshold else 'stanford')
+        temp_df['orientation_pred'] = temp_df['orientation_pred_proba'].apply(lambda x: 'mayo' if x > self.prediction_threshold else 'stanford')
         self.df = pd.merge(self.df, temp_df[['dicom_id', 'orientation_pred']], on='dicom_id', how='outer')
         self.df.to_csv(self.output_csv, index=False)
         

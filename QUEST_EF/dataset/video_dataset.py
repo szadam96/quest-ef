@@ -122,29 +122,28 @@ class EchoVideoDataset(EchoVideoDatasetBase):
             for dicom in val['dicoms']:
                 orientation = dicom['orientation'].lower()
                 dicom_id = dicom['dicom_id']
+                view_pred = dicom.get('view_pred', np.nan)
+                orientation_pred = dicom.get('orientation_pred', np.nan)
                 if isinstance(dicom_id, int):
                     dicom_id = f'{dicom_id:04d}'
                 for frame_indexes in dicom['frame_indexes']:
                     if isinstance(self.root_dir, str):
                         self.root_dir = Path(self.root_dir)
                     if isinstance(self.root_dir, Path):
-                        frames_path = self.root_dir / f'{patient_id}_{dicom_id}' / 'frames'
-                        #wase
                         frames_path = self.root_dir / dicom_id / 'frames'
                     elif isinstance(self.root_dir, list):
                         for root in self.root_dir:
                             frames_path = Path(root) / dicom_id / 'frames'
-                            #frames_path = Path(root) / f'{patient_id}_{dicom_id}' / 'frames'
                             if frames_path.exists():
                                 break
-                    key_list.append((patient_id, dicom_id, frames_path, frame_indexes, orientation, rvef, lvef))
+                    key_list.append((patient_id, dicom_id, frames_path, frame_indexes, orientation, view_pred, orientation_pred, rvef, lvef))
         return key_list
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
             
-        patient_id, dicom_id, frames_path, frame_indexes, orientation, rvef, lvef = self.frame_list[idx]
+        patient_id, dicom_id, frames_path, frame_indexes, orientation, view_pred, orientation_pred, rvef, lvef = self.frame_list[idx]
 
         frames, binary_mask = self.load_frames_and_mask(frames_path, frame_indexes)
         
@@ -157,7 +156,7 @@ class EchoVideoDataset(EchoVideoDatasetBase):
 
         input_tensor = self.to_tensor(frames, binary_mask)
 
-        sample = {'input_tensor': input_tensor.unsqueeze(1), 'binary_mask': binary_mask, 'RVEF': rvef, 'LVEF': lvef, 'patient_id': patient_id, 'dicom_id': dicom_id}
+        sample = {'input_tensor': input_tensor.unsqueeze(1), 'binary_mask': binary_mask, 'RVEF': rvef, 'LVEF': lvef, 'patient_id': patient_id, 'dicom_id': dicom_id, 'view_pred': view_pred, 'orientation_pred': orientation_pred}
                 
         return sample
 

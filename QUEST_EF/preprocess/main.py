@@ -59,7 +59,7 @@ def run_view_and_orientation_models(config: dict, data_csv: Path, skip_non_a4c: 
     run_classifier(config, data_csv, type_='view')
     if skip_non_a4c:
         df = pd.read_csv(data_csv)
-        df = df[~(df['view'] == 'other')]
+        df = df[~(df['view_pred'] == 'other')]
         df.to_csv(data_csv, index=False)
     run_classifier(config, data_csv, type_='orientation')
     

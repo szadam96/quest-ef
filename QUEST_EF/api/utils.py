@@ -3,16 +3,27 @@ from pathlib import Path
 
 def get_config(temp_dir, output_path):
     return {
-            'data_dir': output_path,
-            'image_size': 256,
-            'cardiac_cycle_prediction': {},
-            'json_generation': {
-                'output_dir': Path(temp_dir) / "jsons",
-                'frames_to_sample': 16,
-                'label': [],
-                'name': ''
-            }
+        'data_dir': output_path,
+        'image_size': 256,
+        'cardiac_cycle_prediction': {},
+        'json_generation': {
+            'output_dir': Path(temp_dir) / "jsons",
+            'frames_to_sample': 16,
+            'label': [],
+            'name': ''
+        },
+        'view': {
+            'prediction_threshold': 0.5556141668812448,
+            'out_dim': 3,
+            'batch_size': 100
+        },
+        'orientation': {
+            'prediction_threshold': 0.5,
+            'out_dim': 2,
+            'batch_size': 100
         }
+    }
+
 
 
 def cc_model_config():

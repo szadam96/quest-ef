@@ -1,3 +1,9 @@
+view:
+  checkpoint_path: weights/view.ckpt
+
+orientation:
+  checkpoint_path: weights/orientation.ckpt
+
 cardiac_cycle_prediction:
   checkpoint_path: weights/cardiac_cycle_prediction.ckpt
 

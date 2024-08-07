@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 import yaml
+from QUEST_EF.preprocess.main import run_view_and_orientation_models
 from QUEST_EF.preprocess.save_frames import preprocess_dicom
 from QUEST_EF.preprocess.cardiac_cycle_prediction.save_predictions import load_config, save_predictions
 from QUEST_EF.preprocess.view_and_orientation.run_predictions import run_classifier
@@ -27,7 +28,7 @@ def preprocess_dicom_file(input_path, output_path, flip=False):
     flip : bool
         Whether to flip the image
     '''
-    res = preprocess_dicom(input_path, output_path, flip=flip, raise_error=True)
+    res = preprocess_dicom(input_path, output_path, flip=False, raise_error=True)
     if flip:
         res['orientation'] = 'stanford'
     else:
@@ -92,8 +93,15 @@ def run_ef_prediction(model_checkpoint, root_dir, data_json, output_dir, accerat
                     accerator=accerator)
     
     df = pd.read_csv(output_dir / "validation_predictions.csv")
+    view_pred = df['view_pred'].iloc[0]
+    if pd.isna(view_pred):
+        view_pred = ''
+    orientation_pred = df['orientation_pred'].iloc[0]
+    if pd.isna(orientation_pred):
+        orientation_pred = ''
         
-    return {'LVEF': df['lvef_pred'].iloc[0], 'RVEF': df['rvef_pred'].iloc[0]}
+    return {'LVEF': df['lvef_pred'].iloc[0], 'RVEF': df['rvef_pred'].iloc[0],
+            'view_pred': view_pred, 'orientation_pred': orientation_pred}
 
 @app.post("/predict/")
 async def process_file(file: UploadFile = File(...), stanford: bool = Form(...)):
@@ -123,6 +131,8 @@ async def process_file(file: UploadFile = File(...), stanford: bool = Form(...))
         model_config = cc_model_config()
         config = get_config(temp_dir, output_path)
         config['cardiac_cycle_prediction'] = checkpoints['cardiac_cycle_prediction']
+        config['view']['checkpoint_path'] = checkpoints['view']['checkpoint_path']
+        config['orientation']['checkpoint_path'] = checkpoints['orientation']['checkpoint_path']
 
         try:
             preprocess_dicom_file(temp_file_path, output_path, flip=stanford)
@@ -130,11 +140,17 @@ async def process_file(file: UploadFile = File(...), stanford: bool = Form(...))
             raise HTTPException(status_code=422, detail=str(e))
         
         try:
+            run_view_and_orientation_models(config, output_path / "preprocessed.csv", skip_non_a4c=False)
+        except Exception as e:
+            #raise e
+            raise HTTPException(status_code=422, detail=f'Error in view and orientation prediction: {str(e)}')
+        df = pd.read_csv(output_path / "preprocessed.csv")
+        print(df)
+        try:
             save_predictions(model_config=model_config,
                             output_config=config,
                             data_csv=output_path / "preprocessed.csv")
         except Exception as e:
-            #raise e
             raise HTTPException(status_code=422, detail=f'Error in cardiac cycle prediction: {str(e)}')    
 
         try:
@@ -150,5 +166,5 @@ async def process_file(file: UploadFile = File(...), stanford: bool = Form(...))
                             accerator=checkpoints['ef_prediction']['accelerator'])
         except Exception as e:
             raise HTTPException(status_code=422, detail=f'Error in EF prediction: {str(e)}')
-        
+
         return result

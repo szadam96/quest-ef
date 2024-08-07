@@ -289,7 +289,7 @@ def preprocess_dicom(dicom_file_path: Path, output_path: Path, skip_saving: bool
     except Exception as e:
         print_or_raise(f'Error while processing {dicom_file_path}: {str(e)}', raise_error=raise_error)
         return {}
-    path_to_save = output_path / f'{dicom_file_path.parent.stem}_{dicom_file_path.stem}'
+    path_to_save = output_path / f'{dicom_file_path.stem}'
 
     # Checking whether the DICOM file contains a 3D ultrasound video
     if is_3d_dicom(dicom_dataset):

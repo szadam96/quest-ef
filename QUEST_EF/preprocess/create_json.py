@@ -37,69 +37,6 @@ def calculate_frame_index_arrays(dicom_folder, fps, frames_to_sample):
     return results
 
 
-def create_data_dict(dicom_labels: pd.DataFrame,
-                    path_to_preprocessed_dicoms: Path,
-                    frames_to_sample=16,
-                    label: Union[str, List[str], None] = ['LVEF', 'RVEF']):
-    min_hr = 30
-    max_hr = 150
-
-    my_json = dict()
-    n_excluded_dicoms = 0
-    n_no_cardiac_cycles = 0
-    n_valid_dicoms = 0
-    n_valid_samples = 0
-    excluded_dicoms = []
-    for index, row in tqdm(dicom_labels.iterrows(), total=len(dicom_labels), mininterval=0.1):
-        dicom_id = row['dicom_id']
-        path_to_dicom = path_to_preprocessed_dicoms / dicom_id
-        
-        if not os.path.exists(path_to_dicom):
-            n_excluded_dicoms += 1
-            excluded_dicoms.append(path_to_dicom)
-            print(f'{path_to_dicom} excluded because the video is not present in the preprocessed data!')
-            continue
-
-        frames = [f for f in os.listdir(path_to_dicom/ 'frames')
-                         if f.endswith('.png') and os.path.isfile(path_to_dicom / 'frames'/ f)]
-        num_of_frames = len(frames)
-
-        if num_of_frames < frames_to_sample:
-            n_excluded_dicoms += 1
-            excluded_dicoms.append(path_to_dicom)
-            print(f'{path_to_dicom} excluded because there are not enough frames in video!')
-            continue
-
-        fps = row['fps']
-        if pd.isna(row['fps']):
-            n_excluded_dicoms += 1
-            excluded_dicoms.append(path_to_dicom)
-            print(f'{path_to_dicom} excluded because it has invalid fps')
-            continue
-
-        try:
-            frame_indexes = calculate_frame_index_arrays(path_to_dicom, fps, frames_to_sample)
-        except ValueError as e:
-            n_no_cardiac_cycles += 1
-            print(e)
-            continue
-
-        
-        my_json[dicom_id] = {
-            'frame_indexes': frame_indexes,
-            'orientation': row['orientation'],
-        }
-        
-        n_valid_dicoms += 1
-        n_valid_samples += len(frame_indexes)
-    
-    print(f'No. of valid DICOM files: {n_valid_dicoms}')
-    print(f'No. of valid cardiac cycles: {n_valid_samples}')
-    print(f'No. of excluded DICOM files: {n_excluded_dicoms}')
-    print(f'No. of DICOM files with no cardiac cycles found: {n_no_cardiac_cycles}')
-
-    return my_json
-
 def add_row_to_json_selfsupervised(row, my_json, frame_indexes):
     my_json[row['dicom_id']] = {
         'frame_indexes': frame_indexes,
@@ -126,9 +63,14 @@ def add_row_to_json_supervised(row, my_json, frame_indexes, label):
             except KeyError:
                 my_json[patient_id][label] = np.nan
     
+    view_pred = row.get('view_pred', np.nan)
+    orientation_pred = row.get('orientation_pred', np.nan)
+
     my_json[patient_id]['dicoms'].append({
         'dicom_id': row['dicom_id'],
         'orientation': row['orientation'],
+        'view_pred': view_pred,
+        'orientation_pred': orientation_pred,
         'frame_indexes': frame_indexes
     })
 
