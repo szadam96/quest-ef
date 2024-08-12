@@ -6,7 +6,7 @@ from QUEST_EF.preprocess.view_and_orientation.model.architecture import ResNeXt5
 from QUEST_EF.preprocess.view_and_orientation.dataset.image_dataset import EchoImageDataset
 from QUEST_EF.preprocess.view_and_orientation.utils.callbacks import OrientationPredictionWriter, ViewPredicitonWriter
 
-def run_classifier(config, data_csv, type_='view', devices='auto'):
+def run_classifier(config, data_csv, type_='view', accelerator='cpu'):
     model = ModelV.load_from_checkpoint(config[type_]['checkpoint_path'], pytorch_module=ResNeXt50Module(config[type_]['out_dim']))
     transforms = get_transforms(config)
     dataset = EchoImageDataset(config['data_dir'], transform=transforms, data_csv=data_csv, include_binary_mask=True)
@@ -18,5 +18,5 @@ def run_classifier(config, data_csv, type_='view', devices='auto'):
         writer = OrientationPredictionWriter(data_csv, config[type_]['prediction_threshold'])
     else:
         raise ValueError('type_ must be view or orientation')
-    trainer = pl.Trainer(accelerator='gpu', devices=1, callbacks=[writer])
+    trainer = pl.Trainer(accelerator=accelerator, devices=1, callbacks=[writer])
     trainer.predict(model, dataloader)

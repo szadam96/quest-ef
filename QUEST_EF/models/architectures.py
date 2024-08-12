@@ -132,7 +132,7 @@ class BiventricularModel(nn.Module):
         super().__init__()
         self.lvef_model = CustomVideoMAEForRegression(config)
         self.rvef_model = CustomVideoMAEForRegression(config)
-        ckpt = torch.load(ckpt_path)
+        ckpt = torch.load(ckpt_path, map_location='cpu')
         self.load_state_dict(ckpt['state_dict'])
 
     def forward(
