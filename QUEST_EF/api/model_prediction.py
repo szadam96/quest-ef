@@ -138,15 +138,15 @@ async def process_file(file: UploadFile = File(...), stanford: bool = Form(...))
             preprocess_dicom_file(temp_file_path, output_path, flip=stanford)
         except Exception as e:
             if 'File is missing DICOM File Meta Information' in str(e):
-                raise HTTPException(status_code=422, detail='The uploaded file is not a valid DICOM file. Please upload another DICOM video')
+                raise HTTPException(status_code=422, detail='The uploaded file is not a valid DICOM file. Please upload another DICOM video.')
             else:
-                raise HTTPException(status_code=422, detail='Error while processing DICOM file. Please upload another DICOM video')
+                raise HTTPException(status_code=422, detail='Error while processing DICOM file. Please upload another DICOM video.')
         
         try:
             run_view_and_orientation_models(config, output_path / "preprocessed.csv", skip_non_a4c=False)
         except Exception as e:
             #raise e
-            raise HTTPException(status_code=422, detail=f'Error while processing DICOM file. Please upload another DICOM video')
+            raise HTTPException(status_code=422, detail=f'Error while processing DICOM file. Please upload another DICOM video.')
         df = pd.read_csv(output_path / "preprocessed.csv")
         print(df)
         try:
@@ -154,12 +154,12 @@ async def process_file(file: UploadFile = File(...), stanford: bool = Form(...))
                             output_config=config,
                             data_csv=output_path / "preprocessed.csv")
         except Exception as e:
-            raise HTTPException(status_code=422, detail=f'Error while processing DICOM file. Please upload another DICOM video')    
+            raise HTTPException(status_code=422, detail=f'Error while processing DICOM file. Please upload another DICOM video.')    
 
         try:
             json_path = create_data_json(config, output_path)
         except Exception as e:
-            raise HTTPException(status_code=422, detail='Error while processing DICOM file. Please upload another DICOM video')
+            raise HTTPException(status_code=422, detail='Error while processing DICOM file. Please upload another DICOM video.')
         
         try:
             result = run_ef_prediction(model_checkpoint=Path(checkpoints['ef_prediction']['checkpoint_path']),
@@ -168,6 +168,6 @@ async def process_file(file: UploadFile = File(...), stanford: bool = Form(...))
                             output_dir=Path(temp_dir) / "predictions", 
                             accerator=checkpoints['ef_prediction']['accelerator'])
         except Exception as e:
-            raise HTTPException(status_code=422, detail=f'Error while processing DICOM file. Please upload another DICOM video')
+            raise HTTPException(status_code=422, detail=f'Error while processing DICOM file. Please upload another DICOM video.')
 
         return result
