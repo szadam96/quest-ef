@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from argparse import ArgumentParser
 
 import numpy as np
 from dataset.data_module import EchoVideoDataModule
@@ -24,8 +25,8 @@ dynamo.config.suppress_errors = True
 
 
 def run_training(para_path=None,
-                 train_path='data/merged_data_rvef/train_set_multilabel.json',
-                 log_path='logs_regression_technical_full_model/'):
+                 data_path=None,
+                 log_path='logs/'):
     '''Run training for the model
     
     Parameters
@@ -49,17 +50,16 @@ def run_training(para_path=None,
     # Set seed
     fix_seed(parameters['seed'])
 
-    augmentations = parameters['augmentations']
-
-    parameters['train_path'] = train_path
-    
+    augmentations = parameters['augmentations']    
 
     dataloader_params = parameters['dataloader']
     dataloader_params['to_predict'] = parameters['training']['to_predict']
 
-    #train_path = 'data/merged_data_rvef/train_set_multilabel.json'
-    val_path = 'data/rvenet_technical_lvef/validation_set_multilabel.json'
-    test_path = 'data/rvenet_technical_lvef/test_set_multilabel.json'
+    data_path = Path(data_path)
+
+    train_path = list(data_path.glob('train_set*.json'))[0]
+    val_path = list(data_path.glob('validation_set*.json'))[0]
+    test_path = list(data_path.glob('test_set*.json'))[0] if 'test_set' in [x.stem for x in data_path.glob('test_set*.json')] else None
     #test_path = None
 
     dm = EchoVideoDataModule(train_path, val_path, test_path=test_path,
@@ -75,13 +75,7 @@ def run_training(para_path=None,
     tensorboard_logger = pl_loggers.TensorBoardLogger(log_path)
 
     # Initialize model
-    if 'post_pretraining_weights' in parameters['training']:
-        ckpt_path = parameters['training']['post_pretraining_weights']
-        model = EchoModel(parameters, weight_func=weight_func)
-        model.load_state_dict(torch.load(ckpt_path)['state_dict'])
-        print('Loaded model from post-pretraining')
-    else:
-        model = EchoModel(parameters, weight_func=weight_func)
+    model = EchoModel(parameters, weight_func=weight_func)
 
     #model = torch.compile(model)
 
@@ -104,17 +98,15 @@ def run_training(para_path=None,
     trainer.test(model, datamodule=dm, ckpt_path=best_ckpt_path)
 
 
+def main():
+    parser = ArgumentParser()
+    parser.add_argument('--config', type=str)
+    parser.add_argument('--data_path', type=str)
+    parser.add_argument('--log_path', type=str, default='logs/')
+
+    args = parser.parse_args()
+    run_training(para_path=args.config, train_path=args.data_path, log_path=args.log_path)
+
+
 if __name__ == '__main__':
-    freeze_params = 'data/rvenet_technical_lvef/parameters_freeze.yaml'
-    nofreeze_params = 'data/rvenet_technical_lvef/parameters_no_freeze.yaml'
-    nofreeze_params = 'data/rvenet_technical_lvef/parameters_shitty_pretrain.yaml'
-    ratios = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
-    for ratio in ratios:
-        log_path = f'logs_regression_technical/shitty_pretrain_{ratio}'
-        train_path = f'data/rvenet_technical_lvef/train_set_multilabel_{ratio}.json'
-        run_training(load_model=True, para_path=nofreeze_params, model_path='logs_pretraining/best_loss.ckpt', train_path=train_path, log_path=log_path)
-    
-    #for ratio in ratios:
-    #    log_path = f'logs_regression_technical/freeze_{ratio}'
-    #    train_path = f'data/rvenet_technical_lvef/train_set_multilabel_{ratio}.json'
-    #    run_training(load_model=True, para_path=freeze_params, model_path='logs_pretraining/best_loss.ckpt', train_path=train_path, log_path=log_path)
+    main()

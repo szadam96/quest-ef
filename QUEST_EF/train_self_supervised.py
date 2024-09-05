@@ -1,4 +1,5 @@
 import os
+from argparse import ArgumentParser
 from pathlib import Path
 import yaml
 import torch
@@ -15,17 +16,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def run_training(load_model=False, model_path=None, para_path=None):
+def run_training(para_path=None, data_path=None, log_path='logs/'):
     '''Run training for the model
     
     Parameters
     ----------
-    load_model : bool
-        Whether to load a model from a checkpoint
-    model_path : Path
-        Path to the checkpoint
     para_path : str
         Path to the yaml file containing the parameters
+    data_path : str
+        Path to the data
+    log_path : str
+        Path to the logs
         
     Returns
     -------
@@ -42,15 +43,17 @@ def run_training(load_model=False, model_path=None, para_path=None):
     augmentations = parameters['augmentations']
     dataloader_params = parameters['dataloader']
 
-    train_path = 'self-suervised_data/train_set_multilabel.json'
-    val_path = 'self-suervised_data/test_set_multilabel.json'
+    data_path = Path(data_path)
+
+    train_path = list(data_path.glob('train_set*.json'))[0]
+    val_path = list(data_path.glob('val_set*.json'))[0]
 
     dm = EchoVideoDataModule(train_path, val_path,
                              augmentations=augmentations,
                              mae_config=parameters['model'],
                              **dataloader_params)
 
-    tensorboard_logger = TensorBoardLogger('logs_pretraining/')
+    tensorboard_logger = TensorBoardLogger(log_path, name='self_supervised')
 
     # Initialize model
     model = EchoModel(parameters)
@@ -67,11 +70,16 @@ def run_training(load_model=False, model_path=None, para_path=None):
                          precision='16-mixed')
 
     # Train
-    if load_model:
-        trainer.fit(model, dm, ckpt_path=model_path)
-    else:
-        trainer.fit(model, dm)
+    trainer.fit(model, dm)
 
+def main():
+    parser = ArgumentParser()
+    parser.add_argument('--config', type=str)
+    parser.add_argument('--data_path', type=str)
+    parser.add_argument('--log_path', type=str, default='logs/')
+    args = parser.parse_args()
+
+    run_training(para_path=args.config, data_path=args.data_path, log_path=args.log_path)
 
 if __name__ == '__main__':
-    run_training(load_model=True, para_path='parameters_self_supervised.yaml', model_path='logs_pretraining/best_loss.ckpt')
+    main()

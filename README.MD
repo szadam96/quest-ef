@@ -46,10 +46,10 @@ The pretraining step is used to pretrain the network. It generates the model tha
 ### Usage
 
 ```bash
-python train_self_supervised.py --config config/pretraining.yaml --log_path logs/
+python train_self_supervised.py --config config/pretraining.yaml --data_path PATH_TO_DATA --log_path logs/
 ```
 
-The configuration file `config/pretraining.yaml` contains all the parameters for the pretraining step.The `--log_path` argument is used to specify the path to the directory where the logs will be saved.
+The configuration file `config/pretraining.yaml` contains all the parameters for the pretraining step. The `--data_path` argument is used to specify the path to the directory containing the preprocessed data. The `--log_path` argument is used to specify the path to the directory where the logs will be saved.
 
 ## Training
 
@@ -58,10 +58,10 @@ The training step is used to train the network.
 ### Usage
 
 ```bash
-python train_supervised.py --config config/training.yaml --log_path logs/
+python train_supervised.py --config config/training.yaml --data_path PATH_TO_DATA --log_path logs/
 ```
 
-The configuration file `config/training.yaml` contains all the parameters for the training step.The `--log_path` argument is used to specify the path to the directory where the logs will be saved.
+The configuration file `config/training.yaml` contains all the parameters for the training step. The `--data_path` argument is used to specify the path to the directory containing the preprocessed data. The `--log_path` argument is used to specify the path to the directory where the logs will be saved.
 
 ## Prediction
 
