@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from QUEST_EF.preprocess.save_frames import find_dicom_files, preprocess_multiprocess
+from QUEST_EF.preprocess.view_and_orientation.run_predictions import run_classifier
 from QUEST_EF.preprocess.cardiac_cycle_prediction.save_predictions import load_config, save_predictions
 from QUEST_EF.preprocess.create_json import create_jsons
 
@@ -42,6 +43,26 @@ def run_cardiac_cycle_prediction(config: dict, data_csv: Path, model_config_path
                      output_config=config,
                      data_csv=data_csv)
     
+def run_view_and_orientation_models(config: dict, data_csv: Path, skip_non_a4c: bool = False):
+    '''
+    Run the view and orientation models on the preprocessed DICOM files.
+
+    Parameters
+    ----------
+    config : dict
+        The configuration dictionary.
+    data_csv : Path
+        The path to the CSV containing the paths to the DICOM files.
+    skip_non_a4c : bool
+        Whether to skip the non-A4C views.
+    '''
+    run_classifier(config, data_csv, type_='view')
+    if skip_non_a4c:
+        df = pd.read_csv(data_csv)
+        df = df[~(df['view_pred'] == 'other')]
+        df.to_csv(data_csv, index=False)
+    run_classifier(config, data_csv, type_='orientation')
+    
 def create_dataset_jsons(config: dict, data_csv: Path):
     '''
     Create the JSON files for the dataset.
@@ -53,7 +74,7 @@ def create_dataset_jsons(config: dict, data_csv: Path):
     data_csv : Path
         The path to the CSV containing the paths to the DICOM files.
     '''
-    output_path = config['json_generation']['output']
+    output_path = f'{config["data_dir"]}_json'
     frames_to_sample = config['json_generation']['frames_to_sample']
     label = config['json_generation']['label']
     name = config['json_generation']['name']
@@ -89,22 +110,27 @@ def main():
     input_group.add_argument('--path_to_data', help='The path to the folder containing the DICOM files.')
     input_group.add_argument('--path_to_csv', help='The path to the CSV containing the paths to the DICOM files.')
     parser.add_argument('--config', type=Path, default='config.yaml', help='The path to the configuration file.')
-    parser.add_argument('--orientation', type=str, default='mayo', required=False, help='The orientation of the A4C DICOM files in the dataset.', choices=['mayo', 'stanford'])
+    parser.add_argument('--output_path', type=Path, default='output', help='The path to the output folder.')
+    parser.add_argument('--output_csv', type=Path, default='dicom_files.csv', help='The path to the output CSV file.')
+    parser.add_argument('--orientation', type=str, default='stanford', required=False, help='The orientation of the A4C DICOM files in the dataset.', choices=['mayo', 'stanford'])
 
     args = parser.parse_args()
     if args.path_to_data:
         dicom_files_list = find_dicom_files(args.path_to_data)
         df = pd.DataFrame(dicom_files_list, columns=['dicom_path'])
-        csv_path = 'dicom_files.csv'
+        csv_path = args.output_csv
         df.to_csv(csv_path, index=False)
         data_csv = csv_path
     else:
         data_csv = args.path_to_csv
+    data_csv = Path(data_csv)
     
     config = load_config(args.config)
-    cc_prediction_config = 'preprocess/cardiac_cycle_prediction/model_config.yaml'
+    config['data_dir'] = args.output_path
+    cc_prediction_config = Path('preprocess/cardiac_cycle_prediction/model_config.yaml')
 
     process_dicoms(data_csv, Path(config['data_dir']))
+    run_view_and_orientation_models(config, data_csv, skip_non_a4c=False)
     add_orientation(data_csv, args.orientation)
     run_cardiac_cycle_prediction(config, data_csv, cc_prediction_config)
     create_dataset_jsons(config, data_csv)

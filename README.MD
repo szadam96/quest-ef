@@ -32,12 +32,11 @@ The preprocess step is used to preprocess the data. It generates the data needed
 ### Usage
 
 ```
-python preprocess.py (--path_to_data PATH_TO_DATA | --path_to_csv PATH_TO_CSV) --config config/preprocess.yaml
+python preprocess.py (--path_to_data PATH_TO_DATA | --path_to_csv PATH_TO_CSV) --config config/preprocess.yaml --output_dir OUTPUT_DIR --output_csv OUTPUT_CSV
 ```
 
 The configuration file `config/preprocess.yaml` contains all the parameters for the preprocess step.
-The `--path_to_data` argument is used to specify the path to the directory containing the videos.
-Alternatively a csv file containing the path of each video can be provided with the `--path_to_csv` flag. The table needs to inclide a column named `dicom_path`. In addition, a unique label and orientation can also be provided in the csv for each video. The name of this label must be provided in the config file.
+The `--path_to_data` argument is used to specify the path to the directory containing the videos. Alternatively a csv file containing the path of each video can be provided with the `--path_to_csv` flag. The `--output_dir` argument is used to specify the path to the directory where the preprocessed data will be saved. The `--output_csv` argument is used to specify the path to the csv file containing the preprocessed data. The table needs to inclide a column named `dicom_path`. In addition, a unique label and orientation can also be provided in the csv for each video. The name of this label must be provided in the config file.
 
 ## Pretraining
 
@@ -70,13 +69,14 @@ The prediction step is used to predict the labels of the videos.
 ### Usage
 
 ```bash
-python predict.py --model_path PATH_TO_MODEL --root_dir PATH_TO_DATA --data_json PATH_TO_JSON --output_dir OUTPUT_DIR
+python predict.py --model_path PATH_TO_MODEL --root_dir PATH_TO_DATA --data_json PATH_TO_JSON --output_dir OUTPUT_DIR --accelerator [gpu|cpu]
 ```
 
 The `--model_path` argument is used to specify the path to the model.
 The `--root_dir` argument is used to specify the path to the directory containing the preprocessed data.
 The `--data_json` argument is used to specify the path to the json file containing the data.
 The `--output_dir` argument is used to specify the path to the directory where the predictions will be saved.
+The `--accelerator` argument is used to specify the device to use for the prediction.
 
 ## API
 

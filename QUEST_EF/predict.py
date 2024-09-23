@@ -62,10 +62,11 @@ def main():
     args.add_argument('--root_dir', type=str, required=True)
     args.add_argument('--data_json', type=str, required=True)
     args.add_argument('--output_dir', type=str, required=True)
+    args.add_argument('--accelerator', type=str, default='cpu')
 
     args = args.parse_args()
 
-    run_prediction(args.model_path, Path(args.root_dir), args.data_json, args.output_dir)
+    run_prediction(args.model_path, Path(args.root_dir), args.data_json, args.output_dir, args.accelerator)
 
 
 if __name__ == '__main__':

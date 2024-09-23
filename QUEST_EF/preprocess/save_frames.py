@@ -2,6 +2,7 @@ import argparse
 import multiprocessing
 import os
 from os.path import exists
+import shutil
 import cv2
 import pydicom
 from pydicom.pixel_data_handlers import convert_color_space
@@ -247,6 +248,7 @@ def save_frames(dicom_dataset, path_to_save, frame_limit=None, flip=False, check
         if colored or not hasattr(dicom_dataset, 'UltrasoundColorDataPresent'):
             colored = is_colored(pixel_array, bbox, dicom_dataset.PhotometricInterpretation)
         if colored:
+            shutil.rmtree(path_to_save)
             raise ValueError('The video contains colored frames!')
     
     # Computing the extent of changes in pixel intensity values
@@ -351,7 +353,7 @@ def preprocess_multiprocess(input_csv: pd.DataFrame, output_folder: Path, output
                               [(Path(dicom_file_path), output_folder, skip_saving) for dicom_file_path in dicom_files_list])
     df = pd.DataFrame(result)
     df = pd.merge(input_csv, df, left_on='dicom_path', right_on='dicom_path', how='right')
-    #df.dropna(subset=['dicom_id'], inplace=True)
+    df.dropna(subset=['dicom_id'], inplace=True)
     df.to_csv(output_csv_path, index=False)
 
 
